@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Morning Meet Learnings | Professional Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+        .calendar-day { aspect-ratio: 1 / 1; display: flex; align-items: center; justify-content: center; cursor: pointer; border-radius: 8px; font-size: 0.75rem; transition: 0.2s; border: 1px solid transparent; }
+        .calendar-day:hover { background-color: #f1f5f9; border-color: #cbd5e1; }
+        .has-learning { background-color: #dcfce7; color: #166534; font-weight: 800; border: 1px solid #86efac; }
+        .selected-filter { outline: 2px solid #3b82f6; outline-offset: 2px; background-color: #eff6ff !important; }
+        .date-header { position: sticky; top: 0; z-index: 10; background: rgba(248, 250, 252, 0.9); backdrop-filter: blur(8px); }
+        .custom-scroll::-webkit-scrollbar { width: 5px; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+    </style>
+</head>
+<body class="h-screen flex flex-col overflow-hidden">
+
+    <!-- TOP NAVIGATION -->
+    <nav class="bg-white border-b border-slate-200 px-8 py-4 flex justify-between items-center shadow-sm z-30">
+        <div class="flex items-center gap-4">
+            <div class="bg-indigo-600 p-2.5 rounded-xl text-white shadow-lg shadow-indigo-200">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                </svg>
+            </div>
+            <div>
+                <h1 class="text-xl font-extrabold text-slate-800 tracking-tight">Morning Meet Learnings</h1>
+                <p class="text-xs text-slate-500 font-semibold uppercase tracking-wider">Team Knowledge Management</p>
+            </div>
+        </div>
+        <div class="flex items-center gap-4">
+            <div class="flex items-center bg-slate-100 px-4 py-2 rounded-full border border-slate-200">
+                <span class="text-[10px] font-bold text-slate-500 uppercase mr-3">Admin Mode</span>
+                <input type="checkbox" id="adminToggle" onchange="toggleAdmin()" class="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer">
+            </div>
+            <button onclick="openModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-indigo-100 transition-all active:scale-95">
+                + New Learning
+            </button>
+        </div>
+    </nav>
+
+    <div class="flex flex-1 overflow-hidden">
+        
+        <!-- LEFT SIDEBAR: CALENDAR -->
+        <aside class="w-80 bg-white border-r border-slate-200 p-6 flex flex-col gap-8 overflow-y-auto custom-scroll">
+            <section>
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Calendar</h3>
+                    <div class="flex gap-2">
+                        <select id="calMonth" onchange="renderCalendar()" class="text-xs font-bold text-indigo-600 bg-transparent outline-none">
+                            <option value="0">Jan</option><option value="1" selected>Feb</option><option value="2">Mar</option>
+                            <option value="3">Apr</option><option value="4">May</option><option value="5">Jun</option>
+                            <option value="6">Jul</option><option value="7">Aug</option><option value="8">Sep</option>
+                            <option value="9">Oct</option><option value="10">Nov</option><option value="11">Dec</option>
+                        </select>
+                        <select id="calYear" onchange="renderCalendar()" class="text-xs font-bold text-indigo-600 bg-transparent outline-none">
+                            <option value="2025">2025</option>
+                            <option value="2026">2026</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                    <div class="grid grid-cols-7 text-center text-[10px] font-bold text-slate-400 mb-3">
+                        <div>S</div><div>M</div><div>T</div><div>W</div><div>T</div><div>F</div><div>S</div>
+                    </div>
+                    <div id="calendarGrid" class="grid grid-cols-7 gap-1">
+                        <!-- JS Generated -->
+                    </div>
+                </div>
+                <p class="text-[10px] text-slate-400 mt-3 text-center font-medium">Click a date to filter learnings</p>
+            </section>
+
+            <section>
+                <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Database Stats</h3>
+                <div class="grid grid-cols-1 gap-3">
+                    <div class="bg-indigo-50 p-4 rounded-2xl border border-indigo-100">
+                        <p class="text-[10px] font-bold text-indigo-400 uppercase">Total Entries</p>
+                        <p id="statTotal" class="text-3xl font-black text-indigo-700">0</p>
+                    </div>
+                </div>
+            </section>
+        </aside>
+
+        <!-- MAIN CONTENT: GROUPED FEED -->
+        <main class="flex-1 overflow-y-auto p-8 custom-scroll" id="mainScroll">
+            <div class="max-w-3xl mx-auto">
+                <div class="flex justify-between items-center mb-8">
+                    <div>
+                        <h2 id="viewTitle" class="text-3xl font-black text-slate-800 tracking-tight">All Learnings</h2>
+                        <p id="viewSubtitle" class="text-slate-500 text-sm font-medium">Organized by date and component</p>
+                    </div>
+                    <button onclick="resetFilters()" class="text-xs font-bold text-indigo-600 bg-indigo-50 px-4 py-2 rounded-lg hover:bg-indigo-100 transition">Show All</button>
+                </div>
+
+                <div id="learningFeed" class="space-y-12">
+                    <!-- JS Generated Grouped Content -->
+                </div>
+            </div>
+        </main>
+
+        <!-- RIGHT SIDEBAR: COMPONENT COUNTS -->
+        <aside class="w-80 bg-white border-l border-slate-200 p-6 overflow-y-auto custom-scroll">
+            <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6">Filter by Component</h3>
+            <div id="componentList" class="space-y-2">
+                <!-- JS Generated -->
+            </div>
+        </aside>
+    </div>
+
+    <!-- MODAL -->
+    <div id="modal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden border border-slate-200">
+            <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                <h2 class="text-xl font-bold text-slate-800" id="modalTitle">New Learning Entry</h2>
+                <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600">✕</button>
+            </div>
+            <form id="learningForm" class="p-8 space-y-5">
+                <input type="hidden" id="editIndex">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-400 uppercase mb-2 ml-1">Date</label>
+                        <input type="date" id="formDate" required class="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-400 uppercase mb-2 ml-1">Component</label>
+                        <select id="formComponent" required class="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+                            <option>Investment Planning</option>
+                            <option>Tax Planning</option>
+                            <option>Emergency Planning</option>
+                            <option>Estate and Will Planning</option>
+                            <option>Income and Expense Planning</option>
+                            <option>Liability Planning</option>
+                            <option>General</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-400 uppercase mb-2 ml-1">Learning Content</label>
+                    <textarea id="formContent" required rows="5" class="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="Describe the key learning..."></textarea>
+                </div>
+                <div class="flex justify-end gap-3 pt-4">
+                    <button type="button" onclick="closeModal()" class="px-6 py-3 text-sm font-bold text-slate-500">Cancel</button>
+                    <button type="submit" class="bg-indigo-600 text-white px-10 py-3 rounded-xl font-bold hover:bg-indigo-700 shadow-lg transition active:scale-95">Save Entry</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const components = ["Investment Planning", "Tax Planning", "Emergency Planning", "Estate and Will Planning", "Income and Expense Planning", "Liability Planning", "General"];
+        
+        let learnings = JSON.parse(localStorage.getItem('morning_meet_v3')) || [
+            { date: "2025-02-05", component: "Investment Planning", content: "Customers holding direct stock portfolios should be asked to share a consolidated or global report so that past return analysis can be done properly. If the customer is not sharing the report, advisors should ask for the stock names and simulate the past performance." },
+            { date: "2025-02-05", component: "Liability Planning", content: "If a customer has high-interest loans and at the same time is keeping surplus money in savings accounts or liquid funds, the priority should be loan prepayment. Advisors must clearly explain this to the customer by showing calculations such as interest saved versus low returns earned on idle funds." },
+            { date: "2025-02-05", component: "Investment Planning", content: "For REITs and InvITs, advisors should understand the asset class in depth and not evaluate it only based on dividends or market price volatility. It is important to look at balance sheet strength and how the underlying asset value is increasing year on year." },
+            { date: "2025-02-05", component: "Tax Planning", content: "In cases where customers are paying monthly rent above ₹50,000, advisors must check whether TDS has been deducted and paid. If not, this needs to be closed before March 2026." },
+            { date: "2025-02-05", component: "Tax Planning", content: "While calculating impact, advisors should not blindly enter numbers based only on EOS. For Section 54F property purchase, the same impact should not be counted again for TER." },
+            { date: "2026-02-06", component: "General", content: "Complete Financial Data Gathering: Advisors must collect complete financial data, including income, expenses, assets, liabilities, and insurance details irrespective of readiness." },
+            { date: "2026-02-06", component: "Income and Expense Planning", content: "Expense & Behavioural Probing: Where a customer (e.g., age 34 earning 30 lacs p.a) has low assets (₹15 lakh), advisors should deep-dive into spending patterns." },
+            { date: "2026-02-06", component: "Tax Planning", content: "Timely Tax Harvesting: Should not be postponed to the last week of the financial year. Initiate well in advance for better execution." },
+            { date: "2026-02-06", component: "Tax Planning", content: "NPS - Investment, Not Expense: Monthly contributions should be positioned as a long-term retirement investment, not as a cost." },
+            { date: "2026-02-06", component: "Emergency Planning", content: "Emergency Fund - Need-Based Approach: Recommendations should not be system-driven. Assess lifestyle, dependents, and risks." },
+            { date: "2026-02-06", component: "Liability Planning", content: "Under-Construction Property Loans: Ask for the loan disbursement schedule/document to understand cash flow impact and interest outgo." },
+            { date: "2026-02-06", component: "Tax Planning", content: "ITR Filing – Proactive Nudging: Actively nudge customers for timely filing as it is a critical compliance and planning input." }
+        ];
+
+        let isAdmin = false;
+        let filter = { type: 'all', value: null };
+
+        function toggleAdmin() {
+            isAdmin = document.getElementById('adminToggle').checked;
+            renderAll();
+        }
+
+        function renderAll() {
+            renderCalendar();
+            renderFeed();
+            renderComponentStats();
+            document.getElementById('statTotal').innerText = learnings.length;
+            localStorage.setItem('morning_meet_v3', JSON.stringify(learnings));
+        }
+
+        function renderCalendar() {
+            const grid = document.getElementById('calendarGrid');
+            const month = parseInt(document.getElementById('calMonth').value);
+            const year = parseInt(document.getElementById('calYear').value);
+            grid.innerHTML = '';
+
+            const firstDay = new Date(year, month, 1).getDay();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+            for(let i=0; i<firstDay; i++) grid.innerHTML += '<div></div>';
+
+            for(let d=1; d<=daysInMonth; d++) {
+                const dateStr = `${year}-${(month+1).toString().padStart(2, '0')}-${d.toString().padStart(2, '0')}`;
+                const hasData = learnings.some(l => l.date === dateStr);
+                const isSelected = filter.type === 'date' && filter.value === dateStr;
+                
+                grid.innerHTML += `
+                    <div onclick="setFilter('date', '${dateStr}')" 
+                         class="calendar-day ${hasData ? 'has-learning' : d === new Date().getDate() && month === new Date().getMonth() ? 'bg-indigo-100 text-indigo-700 font-bold' : ''} ${isSelected ? 'selected-filter' : ''}">
+                        ${d}
+                    </div>`;
+            }
+        }
+
+        function renderComponentStats() {
+            const container = document.getElementById('componentList');
+            container.innerHTML = '';
+            
+            components.forEach(comp => {
+                const count = learnings.filter(l => l.component === comp).length;
+                const isSelected = filter.type === 'component' && filter.value === comp;
+                container.innerHTML += `
+                    <button onclick="setFilter('component', '${comp}')" 
+                         class="w-full p-4 rounded-2xl border transition-all flex justify-between items-center group ${isSelected ? 'border-indigo-500 bg-indigo-50 shadow-sm' : 'border-slate-100 bg-slate-50 hover:bg-white hover:shadow-md'}">
+                        <span class="text-xs font-bold ${isSelected ? 'text-indigo-700' : 'text-slate-600 group-hover:text-indigo-600'}">${comp}</span>
+                        <span class="bg-white px-2.5 py-1 rounded-lg text-[10px] font-black shadow-sm border border-slate-100">${count}</span>
+                    </button>
+                `;
+            });
+        }
+
+        function renderFeed() {
+            const feed = document.getElementById('learningFeed');
+            feed.innerHTML = '';
+            
+            let filtered = [...learnings];
+            if(filter.type === 'date') {
+                filtered = learnings.filter(l => l.date === filter.value);
+                document.getElementById('viewTitle').innerText = `Date: ${new Date(filter.value).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}`;
+            } else if(filter.type === 'component') {
+                filtered = learnings.filter(l => l.component === filter.value);
+                document.getElementById('viewTitle').innerText = filter.value;
+            } else {
+                document.getElementById('viewTitle').innerText = "All Learnings";
+            }
+
+            // Group by Date
+            const grouped = filtered.reduce((acc, curr) => {
+                if (!acc[curr.date]) acc[curr.date] = [];
+                acc[curr.date].push(curr);
+                return acc;
+            }, {});
+
+            const sortedDates = Object.keys(grouped).sort((a,b) => new Date(b) - new Date(a));
+
+            if(sortedDates.length === 0) {
+                feed.innerHTML = `<div class="text-center py-20 text-slate-400 font-medium italic">No learnings found for this selection.</div>`;
+                return;
+            }
+
+            sortedDates.forEach(date => {
+                const dateObj = new Date(date);
+                const dateDisplay = dateObj.toLocaleDateString('en-GB', { weekday: 'long', day: '2-digit', month: 'short', year: 'numeric' });
+                
+                let dateSection = `
+                    <div class="space-y-4">
+                        <div class="date-header py-2 flex items-center gap-4">
+                            <span class="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-500 bg-indigo-50 px-3 py-1 rounded-md">${dateDisplay}</span>
+                            <div class="h-px flex-1 bg-slate-200"></div>
+                        </div>
+                        <div class="grid gap-4">
+                `;
+
+                grouped[date].forEach(l => {
+                    const realIndex = learnings.indexOf(l);
+                    dateSection += `
+                        <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow group relative">
+                            <div class="flex justify-between items-start mb-3">
+                                <span class="text-[9px] font-black uppercase tracking-widest text-slate-400 bg-slate-50 px-2 py-1 rounded border border-slate-100">${l.component}</span>
+                            </div>
+                            <p class="text-slate-700 leading-relaxed font-medium text-sm">${l.content}</p>
+                            ${isAdmin ? `
+                            <div class="mt-4 flex gap-4 opacity-0 group-hover:opacity-100 transition-opacity pt-3 border-t border-slate-50">
+                                <button onclick="editEntry(${realIndex})" class="text-[10px] font-bold text-indigo-500 hover:text-indigo-700 uppercase">Edit</button>
+                                <button onclick="deleteEntry(${realIndex})" class="text-[10px] font-bold text-red-400 hover:text-red-600 uppercase">Delete</button>
+                            </div>
+                            ` : ''}
+                        </div>
+                    `;
+                });
+
+                dateSection += `</div></div>`;
+                feed.innerHTML += dateSection;
+            });
+        }
+
+        function setFilter(type, value) {
+            filter = { type, value };
+            renderAll();
+            document.getElementById('mainScroll').scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function resetFilters() {
+            filter = { type: 'all', value: null };
+            renderAll();
+        }
+
+        // MODAL LOGIC
+        function openModal() { document.getElementById('modal').classList.remove('hidden'); }
+        function closeModal() { 
+            document.getElementById('modal').classList.add('hidden'); 
+            document.getElementById('learningForm').reset();
+            document.getElementById('editIndex').value = '';
+            document.getElementById('modalTitle').innerText = "New Learning Entry";
+        }
+
+        document.getElementById('learningForm').onsubmit = (e) => {
+            e.preventDefault();
+            const idx = document.getElementById('editIndex').value;
+            const data = {
+                date: document.getElementById('formDate').value,
+                component: document.getElementById('formComponent').value,
+                content: document.getElementById('formContent').value
+            };
+
+            if(idx !== "") learnings[idx] = data;
+            else learnings.push(data);
+
+            closeModal();
+            renderAll();
+        };
+
+        function deleteEntry(idx) {
+            if(confirm('Delete this entry?')) {
+                learnings.splice(idx, 1);
+                renderAll();
+            }
+        }
+
+        function editEntry(idx) {
+            const l = learnings[idx];
+            document.getElementById('editIndex').value = idx;
+            document.getElementById('formDate').value = l.date;
+            document.getElementById('formComponent').value = l.component;
+            document.getElementById('formContent').value = l.content;
+            document.getElementById('modalTitle').innerText = "Edit Learning Entry";
+            openModal();
+        }
+
+        // Initialize
+        renderAll();
+    </script>
+</body>
+</html>
